@@ -2,6 +2,8 @@ module LieGroups
 
 using LinearAlgebra
 
+using ChainRulesCore
+
 import Base: identity, +, -, *, inv, ==
 
 export
@@ -12,7 +14,6 @@ export
     dof,
     ∧, ∨,
     ⋉,
-    jacobian,
     ⊕,
 
     # rotations
@@ -32,5 +33,7 @@ include("liegroup.jl")
 include("liealgebra.jl")
 include("rotations.jl")
 include("rigid_motions.jl")
+include("derivatives.jl")
+include("maps.jl")
 
 end

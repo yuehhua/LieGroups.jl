@@ -47,17 +47,6 @@ Base.Vector(alg::so{N,T}) where {N,T<:AbstractMatrix} = ∨(so{N}, alg.θ)
 Base.Matrix(alg::so{N,T}) where {N,T<:AbstractVector} = ∧(so{N}, alg.θ)
 Base.Matrix(alg::so{N,T}) where {N,T<:AbstractMatrix} = alg.θ
 
-function left_jacobian(alg::so{3})
-    θ² = sum(abs2, alg.θ)
-    θ = √θ²
-    W = skewsymmetric(alg.θ)
-    M1 = (1. - cos(θ))/(θ²) * W
-    M2 = (θ - sin(θ))/(θ² * θ) * W^2
-    return I(3) + M1 + M2
-end
-
-right_jacobian(alg::so{3}) = left_jacobian(alg)'
-
 
 # Group Interfaces
 
@@ -80,24 +69,27 @@ end
 
 rotation(g::SO) = Array(g.R)
 
-identity(::SO{N}) where {N} = SO{N}(I(N))
-identity(::Type{SO{N}}) where {N} = SO{N}(I(N))
+identity(::SO{N}) where {N} = I(N) |> SO{N}
+identity(::Type{SO{N}}) where {N} = I(N) |> SO{N}
 
-inv(g::SO{N}) where {N} = SO{N}(inv(rotation(g)))
+inv(g::SO{N}) where {N} = rotation(g)' |> SO{N}
 
 (*)(::SO{M}, ::SO{N}) where {M,N} =
     throw(ArgumentError("* operation for SO{$M} and SO{$N} group is not defined."))
 
-(*)(g1::SO{N}, g2::SO{N}) where {N} = SO{N}(rotation(g1) * rotation(g2))
+(*)(g1::SO{N}, g2::SO{N}) where {N} = rotation(g1) * rotation(g2) |> SO{N}
 
 (==)(g1::SO{N}, g2::SO{N}) where {N} = Matrix(g1) == Matrix(g2)
 Base.isapprox(g1::SO{N}, g2::SO{N}) where {N} = isapprox(Matrix(g1), Matrix(g2))
 
+LinearAlgebra.adjoint(g::SO{2}) = one(eltype(rotation(g))) |> SO{N}
+LinearAlgebra.adjoint(g::SO{N}) where {N} = rotation(g) |> SO{N}
+
+⋉(g::SO{N}, x::T) where {N,T<:AbstractVector} = Matrix(g) * x
+
 Base.Matrix(g::SO) = rotation(g)
 
 Base.show(io::IO, g::SO{N}) where {N} = print(io, "SO{$N}(R=", rotation(g), ")")
-
-⋉(g::SO{N}, x::T) where {N,T<:AbstractVector} = Matrix(g) * x
 
 
 # Array Interfaces
@@ -117,10 +109,3 @@ function ∨(::Type{so{N}}, Θ::AbstractMatrix) where {N}
         throw(ArgumentError("not support."))
     end
 end
-
-
-# Maps
-
-Base.exp(alg::so{N,T}) where {N,T<:AbstractMatrix} = SO{N}(exp(alg.θ))
-Base.exp(alg::so{N,T}) where {N,T<:AbstractVector} = SO{N}(exp(∧(so{N}, alg.θ)))
-Base.log(g::SO{N}) where {N} = so{N}(∨(so{N}, log(rotation(g))))
